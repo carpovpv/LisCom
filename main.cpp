@@ -76,8 +76,8 @@ int main ()
         //!!! Внимание. Это тестовый аккаунт. Для тестирования используйте логин и пароль,
         //полученный от менеджеров лаборатории.
 
-        const char * login = "TESTER";
-        const char * password = "Q3434";
+        const char * login = "YOURLOGIN";
+        const char * password = "YOURPASSWORD";
 
         int res;
         nacpp = (*p_factory_function)(login, password, &res);
