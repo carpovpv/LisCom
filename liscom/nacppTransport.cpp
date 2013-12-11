@@ -70,3 +70,77 @@ void NacppTransport::Free(char *mem)
     if(mem != NULL)
         free(mem);
 }
+
+#ifdef WIN32
+
+NacppTransport * nakff = NULL;
+
+extern "C" __declspec(dllexport) void login(const char * login, const char * password, int * isError)
+{
+    nakff = new NacppTransport(login, password, isError);
+}
+
+extern "C" __declspec(dllexport) char* GetDictionary(const char* dict, int* isError)
+{
+    if(nakff)
+        nakff->GetDictionary(dict, isError);
+}
+
+extern "C" __declspec(dllexport) char* GetFreeOrders(int num, int* isError)
+{
+    if(nakff)
+        nakff->GetFreeOrders(num, isError);
+}
+
+extern "C" __declspec(dllexport) char* GetResults(const char* folderno, int* isError)
+{
+    if(nakff)
+        nakff->GetResults(folderno, isError);
+}
+
+extern "C" __declspec(dllexport) char* GetPending(int* isError)
+{
+    if(nakff)
+        nakff->GetPending(isError);
+}
+
+extern "C" __declspec(dllexport) char* CreateOrder(const char* message, int* isError)
+{
+    if(nakff)
+        nakff->CreateOrder(message, isError);
+}
+
+extern "C" __declspec(dllexport) char* DeleteOrder(const char* folderno, int* isError)
+{
+    if(nakff)
+        nakff->DeleteOrder(folderno, isError);
+}
+
+extern "C" __declspec(dllexport) char* EditOrder(const char* message, int* isError)
+{
+    if(nakff)
+        nakff->EditOrder(message, isError);
+}
+
+extern "C" __declspec(dllexport) int GetPrintResult(const char* folderno, LPCWSTR filePath)
+{
+    if(nakff)
+        nakff->GetPrintResult(folderno, filePath);
+}
+
+extern "C" __declspec(dllexport) void Free(char * mem)
+{
+    if(nakff)
+        nakff->Free(mem);
+}
+
+extern "C" __declspec(dllexport) void logout()
+{
+    if(nakff)
+    {
+        delete nakff;
+        nakff = NULL;
+    }
+}
+
+#endif

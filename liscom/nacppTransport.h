@@ -51,6 +51,19 @@ NacppInterface * getTransport(const char* login,
 {
     return new NacppTransport(login, password, isError);
 }
+
+extern "C" __declspec(dllexport) void login(const char * login, const char * password, int *isError);
+extern "C" __declspec(dllexport) char* GetDictionary(const char* dict, int* isError);
+extern "C" __declspec(dllexport) char* GetFreeOrders(int num, int* isError);
+extern "C" __declspec(dllexport) char* GetResults(const char* folderno, int* isError);
+extern "C" __declspec(dllexport) char* GetPending(int* isError);
+extern "C" __declspec(dllexport) char* CreateOrder(const char* message, int* isError);
+extern "C" __declspec(dllexport) char* DeleteOrder(const char* folderno, int* isError);
+extern "C" __declspec(dllexport) char* EditOrder(const char* message, int* isError);
+extern "C" __declspec(dllexport) int GetPrintResult(const char* folderno, LPCWSTR filePath = L"");
+extern "C" __declspec(dllexport) void Free(char * mem);
+extern "C" __declspec(dllexport) void logout();
+
 #else
 extern "C" NacppInterface * getTransport(const char* login,
         const char* password,
