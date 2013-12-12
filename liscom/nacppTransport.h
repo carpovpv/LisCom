@@ -18,6 +18,13 @@
 #include <time.h>
 #include <fstream>
 
+#ifdef WIN32
+    #define DECL __declspec(dllexport)
+    #include <windows.h>
+#else
+    #define DECL
+#endif
+
 class PrivateNacpp;
 class NacppTransport : public NacppInterface
 {
@@ -36,42 +43,34 @@ public:
     char* EditOrder(const char* message, int* isError);
 
     int GetPrintResult(const char* folderno, LPCWSTR filePath = L"");
-    void Free(char * mem);
+    void Reconnect(int *isError);
+
+    void Logout();
 
 private:
     PrivateNacpp *d;
 
 };
 
-#ifdef WIN32
-extern "C" __declspec(dllexport)
-NacppInterface * getTransport(const char* login,
+
+extern "C" DECL NacppInterface * getTransport(const char* login,
                               const char* password,
                               int  * isError)
 {
     return new NacppTransport(login, password, isError);
 }
 
-extern "C" __declspec(dllexport) void login(const char * login, const char * password, int *isError);
-extern "C" __declspec(dllexport) char* GetDictionary(const char* dict, int* isError);
-extern "C" __declspec(dllexport) char* GetFreeOrders(int num, int* isError);
-extern "C" __declspec(dllexport) char* GetResults(const char* folderno, int* isError);
-extern "C" __declspec(dllexport) char* GetPending(int* isError);
-extern "C" __declspec(dllexport) char* CreateOrder(const char* message, int* isError);
-extern "C" __declspec(dllexport) char* DeleteOrder(const char* folderno, int* isError);
-extern "C" __declspec(dllexport) char* EditOrder(const char* message, int* isError);
-extern "C" __declspec(dllexport) int GetPrintResult(const char* folderno, LPCWSTR filePath = L"");
-extern "C" __declspec(dllexport) void Free(char * mem);
-extern "C" __declspec(dllexport) void logout();
-
-#else
-extern "C" NacppInterface * getTransport(const char* login,
-        const char* password,
-        int * isError)
-{                                     
-    return new NacppTransport(login, password, isError);
-}
-#endif
+extern "C" DECL void login(const char * login, const char * password, int *isError);
+extern "C" DECL char* GetDictionary(const char* dict, int* isError);
+extern "C" DECL char* GetFreeOrders(int num, int* isError);
+extern "C" DECL char* GetResults(const char* folderno, int* isError);
+extern "C" DECL char* GetPending(int* isError);
+extern "C" DECL char* CreateOrder(const char* message, int* isError);
+extern "C" DECL char* DeleteOrder(const char* folderno, int* isError);
+extern "C" DECL char* EditOrder(const char* message, int* isError);
+extern "C" DECL int GetPrintResult(const char* folderno, LPCWSTR filePath = L"");
+extern "C" DECL void logout();
+extern "C" DECL void reconnect(int *isError);
 
 
 #endif // NACPPTRANSPORT_H

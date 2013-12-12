@@ -41,6 +41,7 @@
 
 #include "../nacppInterface.h"
 #include <iostream>
+#include <vector>
 
 #define SERVER  "nacpp.info"
 #define PORT 443
@@ -53,6 +54,7 @@ public:
     ~PrivateNacpp();
 
     int LoginToNacpp(const std::string & login, const std::string & password);
+    void Reconnect(int * isError);
     int LogoutFromNacpp();
 
     char* GetDictionary(const char* dict, int* isError);
@@ -64,6 +66,7 @@ public:
     char* EditOrder(const char* message, int* isError);
 
     int GetPrintResult(const char* folderno, LPCWSTR filePath = L"");
+
 private:
     typedef struct {
         int socket;
@@ -73,12 +76,19 @@ private:
 
     Connection* conn;
     std::string sessionId;
+    std::string m_login;
+    std::string m_password;
 
     int tcpConnect();
 
     int sslConnect(Connection ** c);
     void sslDisconnect (Connection *c);
     int sslRead (SSL * ssl, Request & params);
+
+    //указатели на выделенную память
+    std::vector<char *> pool;
+    char * copyString(const char *);
+
 };
 
 

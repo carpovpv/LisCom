@@ -11,6 +11,13 @@
 ******************************************************************/
 #include "privateNacpp.h"
 
+char * PrivateNacpp::copyString(const char *mes)
+{
+    char * p = strdup(mes);
+    pool.push_back(p);
+    return p;
+}
+
 PrivateNacpp::PrivateNacpp(const std::string &login,
                            const std::string & password,
                            int * isError)
@@ -21,6 +28,10 @@ PrivateNacpp::PrivateNacpp(const std::string &login,
         *isError = res;
     else
         *isError = LoginToNacpp(login, password);
+
+    m_login = login;
+    m_password = password;
+
 }
 
 PrivateNacpp::~PrivateNacpp()
@@ -28,9 +39,13 @@ PrivateNacpp::~PrivateNacpp()
     LogoutFromNacpp();
     sslDisconnect(conn);
 
+    for(int i=0; i< pool.size(); i++)
+       free(pool[i]);
+
 #ifdef WIN32
     WSACleanup();
 #endif
+
 }
 
 int PrivateNacpp::tcpConnect()
@@ -269,6 +284,22 @@ int PrivateNacpp::LogoutFromNacpp()
 
 }
 
+void PrivateNacpp::Reconnect(int * isError)
+{
+    sslDisconnect(conn);
+
+#ifdef WIN32
+    WSACleanup();
+#endif
+
+    conn = NULL;
+    int res = sslConnect(&conn);
+    if(res != ERROR_NO)
+        *isError = res;
+    else
+        *isError = LoginToNacpp(m_login, m_password);
+}
+
 char* PrivateNacpp::GetDictionary(const char* dict, int* isError)
 {
     SSL *ssl = conn->sslHandle;
@@ -323,7 +354,12 @@ char* PrivateNacpp::GetDictionary(const char* dict, int* isError)
             return NULL;
         }
     }
-    return strdup(response.c_str());
+    else
+    {
+        *isError = ERROR_COMMUNICATION;
+        return NULL;
+    }
+    return copyString(response.c_str());
 }
 
 char* PrivateNacpp::GetFreeOrders(int num, int* isError)
@@ -370,7 +406,7 @@ char* PrivateNacpp::GetFreeOrders(int num, int* isError)
             return NULL;
         }
     }
-    return strdup(response.c_str());
+    return copyString(response.c_str());
 }
 
 char* PrivateNacpp::GetResults(const char* folderno, int* isError)
@@ -419,7 +455,7 @@ char* PrivateNacpp::GetResults(const char* folderno, int* isError)
             return NULL;
         }
     }
-    return strdup(response.c_str());
+    return copyString(response.c_str());
 }
 
 char* PrivateNacpp::GetPending(int* isError)
@@ -457,7 +493,7 @@ char* PrivateNacpp::GetPending(int* isError)
             return NULL;
         }
     }
-    return strdup(response.c_str());
+    return copyString(response.c_str());
 }
 
 char* PrivateNacpp::CreateOrder(const char* message, int* isError)
@@ -501,7 +537,7 @@ char* PrivateNacpp::CreateOrder(const char* message, int* isError)
             return NULL;
         }
     }
-    return strdup(response.c_str());
+    return copyString(response.c_str());
 }
 
 char* PrivateNacpp::DeleteOrder(const char* folderno, int* isError)
@@ -550,7 +586,7 @@ char* PrivateNacpp::DeleteOrder(const char* folderno, int* isError)
             return NULL;
         }
     }
-    return strdup(response.c_str());
+    return copyString(response.c_str());
 }
 
 char* PrivateNacpp::EditOrder(const char* message, int* isError)
@@ -594,7 +630,7 @@ char* PrivateNacpp::EditOrder(const char* message, int* isError)
             return NULL;
         }
     }
-    return strdup(response.c_str());
+    return copyString(response.c_str());
 }
 
 int PrivateNacpp::GetPrintResult(const char* folderno, LPCWSTR filePath)
