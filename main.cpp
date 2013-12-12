@@ -70,8 +70,8 @@ int main ()
         //!!! Внимание. Это тестовый аккаунт. Для тестирования используйте логин и пароль,
         //полученный от менеджеров лаборатории.
 
-        const char * login = "TESTER";
-        const char * password = "Q3434";
+        const char * login = "TEST";
+        const char * password = "TEST";
 
         int res;
         nacpp = (*p_factory_function)(login, password, &res);
@@ -80,7 +80,7 @@ int main ()
             //Ошибки здесь скорее всего сетевые: недоступен хост, неверно загружены SSL библиотеки и пр.
             fprintf(stderr, "Error in authorization/communication: %d.\n", res);
 
-            delete nacpp;
+            nacpp->Logout();
             UnloadLisCom();
 
             return EXIT_FAILURE;
