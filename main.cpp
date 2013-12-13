@@ -70,8 +70,8 @@ int main ()
         //!!! Внимание. Это тестовый аккаунт. Для тестирования используйте логин и пароль,
         //полученный от менеджеров лаборатории.
 
-        const char * login = "TEST";
-        const char * password = "TEST";
+        const char * login = "TESTER";
+        const char * password = "Q3434";
 
         int res;
         nacpp = (*p_factory_function)(login, password, &res);
@@ -80,7 +80,7 @@ int main ()
             //Ошибки здесь скорее всего сетевые: недоступен хост, неверно загружены SSL библиотеки и пр.
             fprintf(stderr, "Error in authorization/communication: %d.\n", res);
 
-            delete nacpp;
+            nacpp->Logout();
             UnloadLisCom();
 
             return EXIT_FAILURE;
@@ -91,6 +91,7 @@ int main ()
         if(res == ERROR_NO)
         {
             printf("Result: %s\n", dict);
+            nacpp->FreeString(dict);
             //дальнейшая обработка
         }
         else if(res == ERROR_COMMUNICATION)
@@ -99,6 +100,7 @@ int main ()
              if(res != ERROR_NO)
              {
                  fprintf(stderr, "Failed reconnect!\n");
+                 nacpp->Logout();
                  UnloadLisCom();
 
                  return EXIT_FAILURE;

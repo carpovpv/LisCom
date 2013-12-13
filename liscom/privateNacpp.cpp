@@ -11,13 +11,6 @@
 ******************************************************************/
 #include "privateNacpp.h"
 
-char * PrivateNacpp::copyString(const char *mes)
-{
-    char * p = strdup(mes);
-    pool.push_back(p);
-    return p;
-}
-
 PrivateNacpp::PrivateNacpp(const std::string &login,
                            const std::string & password,
                            int * isError)
@@ -39,11 +32,10 @@ PrivateNacpp::~PrivateNacpp()
     LogoutFromNacpp();
     sslDisconnect(conn);
 
-    for(int i=0; i< pool.size(); i++)
-       free(pool[i]);
-
 #ifdef WIN32
-    WSACleanup();
+    //в многопоточных приложениях мы можем неожиданно
+    //завершить основую работу приложения
+    //WSACleanup();
 #endif
 
 }
@@ -359,7 +351,7 @@ char* PrivateNacpp::GetDictionary(const char* dict, int* isError)
         *isError = ERROR_COMMUNICATION;
         return NULL;
     }
-    return copyString(response.c_str());
+    return strdup(response.c_str());
 }
 
 char* PrivateNacpp::GetFreeOrders(int num, int* isError)
@@ -406,7 +398,7 @@ char* PrivateNacpp::GetFreeOrders(int num, int* isError)
             return NULL;
         }
     }
-    return copyString(response.c_str());
+    return strdup(response.c_str());
 }
 
 char* PrivateNacpp::GetResults(const char* folderno, int* isError)
@@ -455,7 +447,7 @@ char* PrivateNacpp::GetResults(const char* folderno, int* isError)
             return NULL;
         }
     }
-    return copyString(response.c_str());
+    return strdup(response.c_str());
 }
 
 char* PrivateNacpp::GetPending(int* isError)
@@ -493,7 +485,7 @@ char* PrivateNacpp::GetPending(int* isError)
             return NULL;
         }
     }
-    return copyString(response.c_str());
+    return strdup(response.c_str());
 }
 
 char* PrivateNacpp::CreateOrder(const char* message, int* isError)
@@ -537,7 +529,7 @@ char* PrivateNacpp::CreateOrder(const char* message, int* isError)
             return NULL;
         }
     }
-    return copyString(response.c_str());
+    return strdup(response.c_str());
 }
 
 char* PrivateNacpp::DeleteOrder(const char* folderno, int* isError)
@@ -586,7 +578,7 @@ char* PrivateNacpp::DeleteOrder(const char* folderno, int* isError)
             return NULL;
         }
     }
-    return copyString(response.c_str());
+    return strdup(response.c_str());
 }
 
 char* PrivateNacpp::EditOrder(const char* message, int* isError)
@@ -630,10 +622,10 @@ char* PrivateNacpp::EditOrder(const char* message, int* isError)
             return NULL;
         }
     }
-    return copyString(response.c_str());
+    return strdup(response.c_str());
 }
 
-int PrivateNacpp::GetPrintResult(const char* folderno, LPCWSTR filePath)
+int PrivateNacpp::GetPrintResult(const char* folderno, const char * filePath)
 {
     SSL *ssl = conn->sslHandle;
     std::string request = "GET /print.php?action=savereport&id=" + (std::string)folderno + "&logo" + " HTTP/1.1\r\n"
@@ -651,7 +643,7 @@ int PrivateNacpp::GetPrintResult(const char* folderno, LPCWSTR filePath)
     int res = sslRead (ssl, params);
     if(res == ERROR_NO)
     {
-
+        /*
         std::map<std::string, std::string> headers = params.getHeaders();
         std::string Content_MD5;
         std::string Content_Length;
@@ -676,17 +668,18 @@ int PrivateNacpp::GetPrintResult(const char* folderno, LPCWSTR filePath)
 
         if (strcmp(Content_MD5.c_str(), calc_Content_MD5) != 0)
             return ERROR_PDF_CHECK_SUM;
-
+        */
         int status = params.getStatus();
         if(status == 200)
         {
 
-            std::wstring filename = std::wstring(filePath) +
-                                    L"report#" +
-                                    std::wstring(folderno, folderno + strlen(folderno)) +
-                                    L".pdf";
+            std::string filename = std::string(filePath) +
+                                    "report#" +
+                                    std::string(folderno, folderno + strlen(folderno)) +
+                                    ".pdf";
   #ifdef WIN32
-            HANDLE hFile = CreateFileW(filename.c_str(), GENERIC_WRITE,
+
+            HANDLE hFile = CreateFile(filename.c_str(), GENERIC_WRITE,
                                        FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
                                        OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL,  NULL);
 
@@ -723,4 +716,10 @@ int PrivateNacpp::GetPrintResult(const char* folderno, LPCWSTR filePath)
             return ERROR_COMMUNICATION;
     }
     return res;
+}
+
+void PrivateNacpp::FreeString(char *buf)
+{
+    if(buf != NULL)
+        free(buf);
 }

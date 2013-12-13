@@ -65,7 +65,8 @@ public:
     char* DeleteOrder(const char* folderno, int* isError);
     char* EditOrder(const char* message, int* isError);
 
-    int GetPrintResult(const char* folderno, LPCWSTR filePath = L"");
+    int GetPrintResult(const char* folderno, const char * filePath);
+    void FreeString(char *);
 
 private:
     typedef struct {
@@ -84,10 +85,6 @@ private:
     int sslConnect(Connection ** c);
     void sslDisconnect (Connection *c);
     int sslRead (SSL * ssl, Request & params);
-
-    //указатели на выделенную память
-    std::vector<char *> pool;
-    char * copyString(const char *);
 
 };
 

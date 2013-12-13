@@ -37,6 +37,13 @@
 typedef const char* LPCSTR;
 typedef const wchar_t* LPCWSTR;
 
+#ifdef WIN32
+    #define DLLEXPORT  __declspec(dllexport)
+    #include <windows.h>
+#else
+    #define DLLEXPORT
+#endif
+
 /**
     @brief Интерфейсный класс для протокола взаимодействия между МИС ЛПУ и
     Лабораторной Информационной Системой ООО НАКФФ
@@ -140,7 +147,7 @@ public:
     @param filePath Путь сохранения файла.
     @return Код ошибки, 0 - если ошибок нет.
     */
-    virtual int GetPrintResult(const char* folderno, LPCWSTR filePath = L"") = 0;
+    virtual int GetPrintResult(const char* folderno, const char *filePath ) = 0;
 
     /**
     @brief Переподключение к сервису в случае обрыва связи или
@@ -151,7 +158,26 @@ public:
     /*закрытие сессии и удаление объекта */
     virtual void Logout() = 0;
 
+    /* очистка динамической памяти */
+    virtual void FreeString(char *)=0;
+
     virtual ~NacppInterface() {}
 };
+
+extern "C"
+{
+    NacppInterface * DLLEXPORT login(const char * login, const char * password, int *isError);
+    char * DLLEXPORT GetDictionary(NacppInterface *nacpp, const char* dict, int* isError);
+    char * DLLEXPORT GetFreeOrders(NacppInterface *nacpp, int num, int* isError);
+    char * DLLEXPORT GetResults(NacppInterface *nacpp, const char* folderno, int* isError);
+    char * DLLEXPORT GetPending(NacppInterface *nacpp, int* isError);
+    char * DLLEXPORT CreateOrder(NacppInterface *nacpp, const char* message, int* isError);
+    char * DLLEXPORT DeleteOrder(NacppInterface *nacpp, const char* folderno, int* isError);
+    char * DLLEXPORT EditOrder(NacppInterface *nacpp, const char* message, int* isError);
+    int DLLEXPORT GetPrintResult(NacppInterface *nacpp, const char* folderno, const char * filePath);
+    void DLLEXPORT logout(NacppInterface *nacpp);
+    void DLLEXPORT reconnect(NacppInterface *nacpp,int *isError);
+    void DLLEXPORT FreeString(char * buf);
+}
 
 #endif // NACPPINTERFACE_H

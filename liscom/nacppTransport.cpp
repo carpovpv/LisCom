@@ -60,7 +60,7 @@ char* NacppTransport::EditOrder(const char* message, int* isError)
     return d->EditOrder(message, isError);
 }
 
-int NacppTransport::GetPrintResult(const char* folderno, LPCWSTR filePath)
+int NacppTransport::GetPrintResult(const char* folderno, const char * filePath)
 {
     return d->GetPrintResult(folderno, filePath);
 }
@@ -72,5 +72,71 @@ void NacppTransport::Reconnect(int *isError)
 
 void NacppTransport::Logout()
 {
-    delete this;
+    delete d;
+}
+
+void NacppTransport::FreeString(char * buf)
+{
+    d->FreeString(buf);
+}
+
+NacppInterface * DLLEXPORT login(const char * login, const char * password, int *isError)
+{
+    return getTransport(login, password, isError);
+}
+
+char * DLLEXPORT GetDictionary(NacppInterface *nacpp, const char* dict, int* isError)
+{
+    return nacpp->GetDictionary(dict, isError);
+}
+
+char * DLLEXPORT GetFreeOrders(NacppInterface *nacpp, int num, int* isError)
+{
+    return nacpp->GetFreeOrders(num, isError);
+}
+
+char * DLLEXPORT GetResults(NacppInterface *nacpp, const char* folderno, int* isError)
+{
+    return nacpp->GetResults(folderno, isError);
+}
+
+char * DLLEXPORT GetPending(NacppInterface *nacpp, int* isError)
+{
+    return nacpp->GetPending(isError);
+}
+
+char * DLLEXPORT CreateOrder(NacppInterface *nacpp, const char* message, int* isError)
+{
+    return nacpp->CreateOrder(message, isError);
+}
+
+char * DLLEXPORT DeleteOrder(NacppInterface *nacpp, const char* folderno, int* isError)
+{
+    return nacpp->DeleteOrder(folderno, isError);
+}
+
+char * DLLEXPORT EditOrder(NacppInterface *nacpp, const char* message, int* isError)
+{
+    return nacpp->EditOrder(message, isError);
+}
+
+int DLLEXPORT GetPrintResult(NacppInterface *nacpp, const char* folderno, const char * filePath)
+{
+    return nacpp->GetPrintResult(folderno, filePath);
+}
+
+void DLLEXPORT logout(NacppInterface *nacpp)
+{
+    nacpp->Logout();
+}
+
+void DLLEXPORT reconnect(NacppInterface *nacpp,int *isError)
+{
+    nacpp->Reconnect(isError);
+}
+
+void DLLEXPORT FreeString(char * buf )
+{
+    if(buf != NULL)
+        free(buf);
 }

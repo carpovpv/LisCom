@@ -18,13 +18,6 @@
 #include <time.h>
 #include <fstream>
 
-#ifdef WIN32
-    #define DECL __declspec(dllexport)
-    #include <windows.h>
-#else
-    #define DECL
-#endif
-
 class PrivateNacpp;
 class NacppTransport : public NacppInterface
 {
@@ -42,17 +35,18 @@ public:
     char* DeleteOrder(const char* folderno, int* isError);
     char* EditOrder(const char* message, int* isError);
 
-    int GetPrintResult(const char* folderno, LPCWSTR filePath = L"");
+    int GetPrintResult(const char* folderno, const char * filePath);
     void Reconnect(int *isError);
 
     void Logout();
+    void FreeString(char *);
 
 private:
     PrivateNacpp *d;
 
 };
 
-extern "C" DECL NacppInterface * getTransport(const char* login,
+extern "C" DLLEXPORT NacppInterface * getTransport(const char* login,
                               const char* password,
                               int  * isError)
 {
