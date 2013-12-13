@@ -27,121 +27,50 @@ NacppTransport::~NacppTransport()
 
 char* NacppTransport::GetDictionary(const char* dict, int* isError)
 {
-    d->GetDictionary(dict, isError);
+    return d->GetDictionary(dict, isError);
 }
 
 char* NacppTransport::GetFreeOrders(int num, int* isError)
 {
-    d->GetFreeOrders(num, isError);
+    return d->GetFreeOrders(num, isError);
 }
 
 char* NacppTransport::GetResults(const char* folderno, int* isError)
 {
-    d->GetResults(folderno, isError);
+    return d->GetResults(folderno, isError);
 }
 
 char* NacppTransport::GetPending(int* isError)
 {
-    d->GetPending(isError);
+    return d->GetPending(isError);
 }
 
 char* NacppTransport::CreateOrder(const char* message, int* isError)
 {
-    d->CreateOrder(message, isError);
+    return d->CreateOrder(message, isError);
 }
 
 char* NacppTransport::DeleteOrder(const char* folderno, int* isError)
 {
-    d->DeleteOrder(folderno, isError);
+    return d->DeleteOrder(folderno, isError);
 }
 
 char* NacppTransport::EditOrder(const char* message, int* isError)
 {
-    d->EditOrder(message, isError);
+    return d->EditOrder(message, isError);
 }
 
 int NacppTransport::GetPrintResult(const char* folderno, LPCWSTR filePath)
 {
-    d->GetPrintResult(folderno, filePath);
+    return d->GetPrintResult(folderno, filePath);
 }
 
 void NacppTransport::Reconnect(int *isError)
 {
-    return d->Reconnect(isError);
+    d->Reconnect(isError);
 }
 
 void NacppTransport::Logout()
 {
     delete this;
-}
-
-
-NacppTransport * nakff = NULL;
-
-extern "C" DECL void login(const char * login, const char * password, int * isError)
-{
-    nakff = new NacppTransport(login, password, isError);
-}
-
-extern "C" DECL char* GetDictionary(const char* dict, int* isError)
-{
-    if(nakff)
-        nakff->GetDictionary(dict, isError);
-}
-
-extern "C" DECL char* GetFreeOrders(int num, int* isError)
-{
-    if(nakff)
-        nakff->GetFreeOrders(num, isError);
-}
-
-extern "C" DECL char* GetResults(const char* folderno, int* isError)
-{
-    if(nakff)
-        nakff->GetResults(folderno, isError);
-}
-
-extern "C" DECL char* GetPending(int* isError)
-{
-    if(nakff)
-        nakff->GetPending(isError);
-}
-
-extern "C" DECL char* CreateOrder(const char* message, int* isError)
-{
-    if(nakff)
-        nakff->CreateOrder(message, isError);
-}
-
-extern "C" DECL char* DeleteOrder(const char* folderno, int* isError)
-{
-    if(nakff)
-        nakff->DeleteOrder(folderno, isError);
-}
-
-extern "C" DECL char* EditOrder(const char* message, int* isError)
-{
-    if(nakff)
-        nakff->EditOrder(message, isError);
-}
-
-extern "C" DECL int GetPrintResult(const char* folderno, LPCWSTR filePath)
-{
-    if(nakff)
-        nakff->GetPrintResult(folderno, filePath);
-}
-
-extern "C" DECL void reconnect(int *isError)
-{
-    if(nakff)
-        nakff->Reconnect(isError);
-}
-
-extern "C" DECL void logout()
-{
-    if(nakff)
-    {
-        delete nakff;
-        nakff = NULL;
-    }
 }

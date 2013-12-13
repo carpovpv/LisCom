@@ -52,25 +52,11 @@ private:
 
 };
 
-
 extern "C" DECL NacppInterface * getTransport(const char* login,
                               const char* password,
                               int  * isError)
 {
     return new NacppTransport(login, password, isError);
 }
-
-extern "C" DECL void login(const char * login, const char * password, int *isError);
-extern "C" DECL char* GetDictionary(const char* dict, int* isError);
-extern "C" DECL char* GetFreeOrders(int num, int* isError);
-extern "C" DECL char* GetResults(const char* folderno, int* isError);
-extern "C" DECL char* GetPending(int* isError);
-extern "C" DECL char* CreateOrder(const char* message, int* isError);
-extern "C" DECL char* DeleteOrder(const char* folderno, int* isError);
-extern "C" DECL char* EditOrder(const char* message, int* isError);
-extern "C" DECL int GetPrintResult(const char* folderno, LPCWSTR filePath = L"");
-extern "C" DECL void logout();
-extern "C" DECL void reconnect(int *isError);
-
 
 #endif // NACPPTRANSPORT_H

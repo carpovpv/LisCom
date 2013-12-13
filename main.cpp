@@ -80,7 +80,7 @@ int main ()
             //Ошибки здесь скорее всего сетевые: недоступен хост, неверно загружены SSL библиотеки и пр.
             fprintf(stderr, "Error in authorization/communication: %d.\n", res);
 
-            nacpp->Logout();
+            delete nacpp;
             UnloadLisCom();
 
             return EXIT_FAILURE;
