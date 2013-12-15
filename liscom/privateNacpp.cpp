@@ -10,21 +10,59 @@
     E-mail: carpovpv@mail.ru
 ******************************************************************/
 #include "privateNacpp.h"
+#include <signal.h>
 
 PrivateNacpp::PrivateNacpp(const std::string &login,
                            const std::string & password,
-                           int * isError)
+                           int * isError,
+                           bool needCache)
 {
+
+    info = new struct ConnectInfo;
+    info->login = login;
+
+    info->password = password;
+    info->work = true;
+
     conn = NULL;
+    info->db = NULL;
+
+    //значение текущего потока гарантировано не совпадет
+    //со значение идентификатора нового потока, поэтому
+    //используется в качестве инициализирующего значения
+    thread = pthread_self();
+
+    //необходимы для синхронизации с потоком получения пула
+    pthread_mutex_init(&info->mutex, NULL);
+    pthread_cond_init(&info->cond, NULL);
+
     int res = sslConnect(&conn);
     if(res != ERROR_NO)
         *isError = res;
     else
-        *isError = LoginToNacpp(login, password);
+        *isError = LoginToNacpp(info->login, info->password);
 
-    m_login = login;
-    m_password = password;
+    if(*isError == ERROR_NO && needCache)
+    {
+        //подключаемся к базе SQLite
+        //запускаем потом получения пула номеров
 
+        fprintf(stderr, "Create thread!\n");
+
+        int rc = sqlite3_open("orders.db", &info->db);
+        if(rc == 0)
+        {
+            std::string sql = "create table if not exists orders (orderno varchar(10) primary key);";
+            rc = sqlite3_exec(info->db, sql.c_str(), NULL, 0, NULL);
+            if( rc == SQLITE_OK )            
+                 pthread_create(&thread, NULL, cacher, info);
+            //в противном случае, мы не можем работать с кешем.
+            //сама база будет закрыта в деструкторе.
+        }
+        else
+            info->db = NULL;
+
+    }
 }
 
 PrivateNacpp::~PrivateNacpp()
@@ -32,12 +70,17 @@ PrivateNacpp::~PrivateNacpp()
     LogoutFromNacpp();
     sslDisconnect(conn);
 
+    if(info->db != NULL)
+         sqlite3_close(info->db);
+    delete info;
+
 #ifdef WIN32
     //в многопоточных приложениях мы можем неожиданно
     //завершить основую работу приложения
     //WSACleanup();
 #endif
 
+    //fprintf(stderr, "NacppPrivate Destructor!\n");
 }
 
 int PrivateNacpp::tcpConnect()
@@ -208,9 +251,9 @@ int PrivateNacpp::LoginToNacpp(const std::string & login, const std::string & pa
     assert(!password.empty());
 
     std::string request = "POST /login.php HTTP/1.1\r\n"
-                          "Host: nacpp.info\r\n"
-                          "Content-Type: application/x-www-form-urlencoded\r\n"
-                          "Content-Length:";
+            "Host: nacpp.info\r\n"
+            "Content-Type: application/x-www-form-urlencoded\r\n"
+            "Content-Length:";
     std::string authorization = "login=" + login + "&password=" + password;
 
     char buf[20];
@@ -259,10 +302,33 @@ int PrivateNacpp::LogoutFromNacpp()
     if(conn == NULL)
         return 0;
 
+    if(!pthread_equal(thread,pthread_self()))
+    {
+        //у нас есть поток
+        info->work = false;
+
+        //сигналим - бип-бип...
+        pthread_mutex_lock(&info->mutex);
+        pthread_cond_signal(&info->cond);
+        pthread_mutex_unlock(&info->mutex);
+
+        fprintf(stderr, "Start waiting...\n");
+        //ждемс...
+        pthread_join(thread, NULL);
+        fprintf(stderr, "End waiting...\n");
+
+        //все потока уже нет, продолжаем закругляться...
+
+        pthread_mutex_destroy(&info->mutex);
+        pthread_cond_destroy(&info->cond);
+
+        fprintf(stderr, "Thread terminated!\n");
+    }
+
     SSL *ssl = conn->sslHandle;
     std::string request = "GET /logout.php HTTP/1.1\r\n"
-                          "Host: nacpp.info\r\n"
-                          "Cookie: PHPSESSID=";
+            "Host: nacpp.info\r\n"
+            "Cookie: PHPSESSID=";
     request += sessionId +"\r\n\r\n";
 
     int cnt = request.size();
@@ -272,8 +338,7 @@ int PrivateNacpp::LogoutFromNacpp()
         return ERROR_COMMUNICATION;
 
     Request params(ssl);
-    return sslRead (ssl, params);
-
+    return sslRead (ssl, params);    
 }
 
 void PrivateNacpp::Reconnect(int * isError)
@@ -289,7 +354,7 @@ void PrivateNacpp::Reconnect(int * isError)
     if(res != ERROR_NO)
         *isError = res;
     else
-        *isError = LoginToNacpp(m_login, m_password);
+        *isError = LoginToNacpp(info->login, info->password);
 }
 
 char* PrivateNacpp::GetDictionary(const char* dict, int* isError)
@@ -300,8 +365,8 @@ char* PrivateNacpp::GetDictionary(const char* dict, int* isError)
     bool isValidDict = false;
     std::string valid_dicts[] = {"bio", "tests", "containertypes", "panels"};
     for (int i = 0;
-            i < sizeof(valid_dicts) / sizeof(std::string);
-            i++)
+         i < sizeof(valid_dicts) / sizeof(std::string);
+         i++)
     {
         if (dict == valid_dicts[i])
         {
@@ -317,8 +382,8 @@ char* PrivateNacpp::GetDictionary(const char* dict, int* isError)
     }
 
     std::string request = "GET /plugins/index.php?act=get-catalog&catalog=" + (std::string)dict + " HTTP/1.1\r\n"
-                          "Host: nacpp.info\r\n"
-                          "Cookie: PHPSESSID=";
+            "Host: nacpp.info\r\n"
+            "Cookie: PHPSESSID=";
     request += sessionId +"\r\n\r\n";
 
     int cnt = request.size();
@@ -369,8 +434,8 @@ char* PrivateNacpp::GetFreeOrders(int num, int* isError)
     sprintf(buf, "%d", num);
 
     std::string request = "GET /plugins/index.php?act=free-orders&n=" + std::string(buf) + " HTTP/1.1\r\n"
-                          "Host: nacpp.info\r\n"
-                          "Cookie: PHPSESSID=";
+            "Host: nacpp.info\r\n"
+            "Cookie: PHPSESSID=";
     request += sessionId +"\r\n\r\n";
 
     int cnt = request.size();
@@ -407,14 +472,14 @@ char* PrivateNacpp::GetResults(const char* folderno, int* isError)
     std::string response;
 
     std::string request = "POST /plugins/index.php?act=request-result HTTP/1.1\r\n"
-                          "Host: nacpp.info\r\n"
-                          "Cookie: PHPSESSID=";
+            "Host: nacpp.info\r\n"
+            "Cookie: PHPSESSID=";
     request += sessionId +"\r\nContent-Type: application/x-www-form-urlencoded\r\n";
 
     std::string message = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-                          "<request>"
-                          "<orderno>" + (std::string)folderno + "</orderno>"
-                          "</request>";
+            "<request>"
+            "<orderno>" + (std::string)folderno + "</orderno>"
+            "</request>";
 
     char buf[20];
     sprintf(buf, "%d", message.length());
@@ -456,8 +521,8 @@ char* PrivateNacpp::GetPending(int* isError)
     std::string response;
 
     std::string request = "GET /plugins/index.php?act=pending HTTP/1.1\r\n"
-                          "Host: nacpp.info\r\n"
-                          "Cookie: PHPSESSID=";
+            "Host: nacpp.info\r\n"
+            "Cookie: PHPSESSID=";
     request += sessionId +"\r\n\r\n";
 
     int cnt = request.size();
@@ -494,8 +559,8 @@ char* PrivateNacpp::CreateOrder(const char* message, int* isError)
     std::string response;
 
     std::string request = "POST /plugins/index.php?act=request-add HTTP/1.1\r\n"
-                          "Host: nacpp.info\r\n"
-                          "Cookie: PHPSESSID=";
+            "Host: nacpp.info\r\n"
+            "Cookie: PHPSESSID=";
     request += sessionId +"\r\nContent-Type: application/x-www-form-urlencoded\r\n";
 
     char buf[20];
@@ -538,14 +603,14 @@ char* PrivateNacpp::DeleteOrder(const char* folderno, int* isError)
     std::string response;
 
     std::string request = "POST /plugins/index.php?act=request-delete HTTP/1.1\r\n"
-                          "Host: nacpp.info\r\n"
-                          "Cookie: PHPSESSID=";
+            "Host: nacpp.info\r\n"
+            "Cookie: PHPSESSID=";
     request += sessionId +"\r\nContent-Type: application/x-www-form-urlencoded\r\n";
 
     std::string message = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
-                          "<request>"
-                          "<order orderno=\"" + (std::string)folderno + "\" action=\"delete\"/>"
-                          "</request>";
+            "<request>"
+            "<order orderno=\"" + (std::string)folderno + "\" action=\"delete\"/>"
+            "</request>";
 
     char buf[20];
     sprintf(buf, "%d", message.length());
@@ -587,8 +652,8 @@ char* PrivateNacpp::EditOrder(const char* message, int* isError)
     std::string response;
 
     std::string request = "POST /plugins/index.php?act=request-edit HTTP/1.1\r\n"
-                          "Host: nacpp.info\r\n"
-                          "Cookie: PHPSESSID=";
+            "Host: nacpp.info\r\n"
+            "Cookie: PHPSESSID=";
     request += sessionId +"\r\nContent-Type: application/x-www-form-urlencoded\r\n";
 
     char buf[20];
@@ -629,8 +694,8 @@ int PrivateNacpp::GetPrintResult(const char* folderno, const char * filePath)
 {
     SSL *ssl = conn->sslHandle;
     std::string request = "GET /print.php?action=savereport&id=" + (std::string)folderno + "&logo" + " HTTP/1.1\r\n"
-                          "Host: nacpp.info\r\n"
-                          "Cookie: PHPSESSID=";
+            "Host: nacpp.info\r\n"
+            "Cookie: PHPSESSID=";
     request += sessionId +"\r\n\r\n";
 
     int cnt = request.size();
@@ -674,14 +739,14 @@ int PrivateNacpp::GetPrintResult(const char* folderno, const char * filePath)
         {
 
             std::string filename = std::string(filePath) +
-                                    "report#" +
-                                    std::string(folderno, folderno + strlen(folderno)) +
-                                    ".pdf";
-  #ifdef WIN32
+                    "report#" +
+                    std::string(folderno, folderno + strlen(folderno)) +
+                    ".pdf";
+#ifdef WIN32
 
             HANDLE hFile = CreateFile(filename.c_str(), GENERIC_WRITE,
-                                       FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
-                                       OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL,  NULL);
+                                      FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
+                                      OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL,  NULL);
 
             if (hFile == INVALID_HANDLE_VALUE)
             {
@@ -722,4 +787,171 @@ void PrivateNacpp::FreeString(char *buf)
 {
     if(buf != NULL)
         free(buf);
+}
+
+void PrivateNacpp::CacheOrders(int *isError)
+{
+
+}
+
+//используется всего два запроса для callback
+// 1. получение текущего количества свободных номеров
+// 2. получение следующего номера
+
+static int call_sqlite(void *data,
+                       int, char **argv,
+                       char **)
+{
+   char * buf = (char *) data;
+   strcpy(buf, argv[0]);
+   return 0;
+}
+
+char * PrivateNacpp::GetNextOrder(int *isError)
+{
+    //пробуем получить из базы
+    char buf[126];
+    std::string sql = "select orderno from orders order by orderno asc limit 1";
+
+    buf[0] = '\0';
+    int rc = sqlite3_exec(info->db, sql.c_str(),
+                          call_sqlite,
+                          (void*)buf, NULL);
+    if( rc == SQLITE_OK && buf[0] != '\0')
+    {
+        //получили, ура.
+        std::string orderno = buf;
+        sql = "delete from orders where orderno ='" + orderno +"'";
+
+        rc = sqlite3_exec(info->db, sql.c_str(),
+                                  NULL,
+                                  (void*)buf, NULL);
+        if(rc == SQLITE_OK)
+        {
+            //все в порядке, номер получен и удален из кэша
+            *isError = ERROR_NO;
+            return strdup(buf);
+        }
+    }
+    else
+    {
+        //пытаемся запросить сервис...
+        char * res = GetFreeOrders(1, isError);
+        if(*isError == ERROR_NO)
+        {
+            char * p = strstr(res, "<orderno>");
+            if(p != NULL)
+            {
+                  p += 9;
+                  std::string orderno = std::string(p, 10);
+
+                  FreeString(res);
+                  *isError = ERROR_NO;
+
+                  return strdup(orderno.c_str());
+            }
+            else
+            {
+                *isError = ERROR_COMMUNICATION;
+                FreeString(res);
+
+                return NULL;
+            }
+        }
+    }
+    return NULL;
+}
+
+void * cacher(void * inf)
+{
+
+    //получение номеров в кэш через отдельный поток и
+    //отдельное подключение
+
+    struct ConnectInfo * info = (struct ConnectInfo *) inf;
+    int isError = 0;
+
+    while(info->work)
+    {
+        pthread_mutex_lock(&info->mutex);
+
+        char buf[126];
+
+        std::string sql = "select count(*) as cnt from orders";
+        int rc = sqlite3_exec(info->db, sql.c_str(),
+                              call_sqlite,
+                              (void*)buf, NULL);
+        if( rc == SQLITE_OK )
+        {
+
+            const int N = 100;    //максимально за раз
+            const int nmin = 50;  //минимальное количество
+
+            fprintf(stderr, "Number of folders %s\n", buf);
+
+            int rn = atoi(buf);
+            if(rn < nmin)
+            {
+
+                int need = N;
+                PrivateNacpp * nacpp = new PrivateNacpp(info->login,
+                                                        info->password, &isError);
+                char * res = nacpp->GetFreeOrders(need, &isError);
+                if(isError == ERROR_NO)
+                {
+                    char * p = res;
+                    char * e = res + strlen(res);
+                    while( (p = strstr(p, "<orderno>")) != NULL)
+                    {
+                          p += 9;
+                          if(p + 10 <= e)
+                          {
+                              std::string orderno = std::string(p, 10);
+                              std::string sql = "insert into orders(orderno) values('" + orderno + "');";
+
+                              rc = sqlite3_exec(info->db, sql.c_str(), NULL, 0, NULL);
+                              if( rc != SQLITE_OK )
+                              {
+                                  //что бы здесь сделать
+                                  //....................
+                              }
+
+                          }
+                    }
+
+                    nacpp->FreeString(res);
+                }
+
+                nacpp->LogoutFromNacpp();
+                delete nacpp;
+            }
+
+
+        }
+
+        //периодически чистим кэш
+
+        std::string vacuum = "vacuum;";
+        sqlite3_exec(info->db, vacuum.c_str(), NULL, 0, NULL);
+
+        struct timespec ts;
+
+        ts.tv_sec  = time(NULL);
+        ts.tv_nsec = 0;
+        ts.tv_sec += 10;
+
+        rc = pthread_cond_timedwait(&info->cond,
+                               &info->mutex,
+                               &ts);
+        if(rc == ETIMEDOUT)
+        {
+            pthread_mutex_unlock(&info->mutex);
+            continue;
+        }
+
+        pthread_mutex_unlock(&info->mutex);
+        break;
+    }
+
+    return NULL;
 }
