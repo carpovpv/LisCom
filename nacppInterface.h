@@ -184,6 +184,7 @@ extern "C"
     void DLLEXPORT logout(NacppInterface *nacpp);
     void DLLEXPORT reconnect(NacppInterface *nacpp,int *isError);
     void DLLEXPORT FreeString(char * buf);
+    char * DLLEXPORT GetNextOrder(NacppInterface *nacpp, int *isError);
 }
 
 #endif // NACPPINTERFACE_H

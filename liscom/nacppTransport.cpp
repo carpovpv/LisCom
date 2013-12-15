@@ -151,3 +151,8 @@ char * NacppTransport::GetNextOrder(int *isError)
 {
     return d->GetNextOrder(isError);
 }
+
+char * DLLEXPORT GetNextOrder(NacppInterface *nacpp, int *isError)
+{
+    return nacpp->GetNextOrder(isError);
+}
