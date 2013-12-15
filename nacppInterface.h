@@ -158,6 +158,12 @@ public:
     /*закрытие сессии и удаление объекта */
     virtual void Logout() = 0;
 
+    /* Пополнение кэша свободных номеров */
+    virtual void CacheOrders(int *isError) = 0;
+
+    /* получение следующего номера из кэша */
+    virtual char * GetNextOrder(int *isError) = 0;
+
     /* очистка динамической памяти */
     virtual void FreeString(char *)=0;
 

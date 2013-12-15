@@ -1,3 +1,4 @@
+
 /*****************************************************************
     Интерфейсный класс для взаимодействия сторонних медицинских
     информационных систем с лабораторной информационной системой
@@ -17,7 +18,12 @@ NacppTransport::NacppTransport(const std::string & login,
                                const std::string & password,
                                int * isError)
 {
-    d = new PrivateNacpp(login, password, isError);
+    d = new PrivateNacpp(login, password, isError, true);
+}
+
+void NacppTransport::CacheOrders(int *isError)
+{
+    d->CacheOrders(isError);
 }
 
 NacppTransport::~NacppTransport()
@@ -139,4 +145,9 @@ void DLLEXPORT FreeString(char * buf )
 {
     if(buf != NULL)
         free(buf);
+}
+
+char * NacppTransport::GetNextOrder(int *isError)
+{
+    return d->GetNextOrder(isError);
 }

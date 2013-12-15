@@ -35,6 +35,9 @@ public:
     char* DeleteOrder(const char* folderno, int* isError);
     char* EditOrder(const char* message, int* isError);
 
+    void CacheOrders(int *isError);
+    char * GetNextOrder(int *isError);
+
     int GetPrintResult(const char* folderno, const char * filePath);
     void Reconnect(int *isError);
 

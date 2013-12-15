@@ -90,9 +90,18 @@ int main ()
         char * dict = nacpp->GetDictionary("bio", &res);
         if(res == ERROR_NO)
         {
-            printf("Result: %s\n", dict);
+            //printf("Result: %s\n", dict);
             nacpp->FreeString(dict);
             //дальнейшая обработка
+
+            sleep(20);
+
+            char *orderno = nacpp->GetNextOrder(&res);
+            if(res == ERROR_NO)
+            {
+                fprintf(stderr, "Orderno: %s\n", orderno);
+                nacpp->FreeString(orderno);
+            }
         }
         else if(res == ERROR_COMMUNICATION)
         {
