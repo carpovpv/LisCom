@@ -44,6 +44,8 @@
 #include <vector>
 #include <sqlite3.h>
 
+#include <pthread.h>
+
 #define SERVER  "nacpp.info"
 #define PORT 443
 

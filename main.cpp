@@ -70,8 +70,8 @@ int main ()
         //!!! Внимание. Это тестовый аккаунт. Для тестирования используйте логин и пароль,
         //полученный от менеджеров лаборатории.
 
-        const char * login = "TESTER";
-        const char * password = "Q3434";
+        const char * login = "TEST";
+        const char * password = "TEST";
 
         int res;
         nacpp = (*p_factory_function)(login, password, &res);
@@ -94,7 +94,11 @@ int main ()
             nacpp->FreeString(dict);
             //дальнейшая обработка
 
-            sleep(20);
+#ifdef WIN32
+            Sleep(2000);
+#else
+            sleep(2);
+#endif
 
             char *orderno = nacpp->GetNextOrder(&res);
             if(res == ERROR_NO)
