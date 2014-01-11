@@ -23,8 +23,9 @@ class NacppTransport : public NacppInterface
 {
 public:
     NacppTransport(const std::string & login,
-                   const std::string & password,
-                   int * isError);
+                   const std::string & password,                   
+                   int * isError,
+                   bool cache = true);
     ~NacppTransport();
 
     char* GetDictionary(const char* dict, int* isError);
@@ -35,7 +36,6 @@ public:
     char* DeleteOrder(const char* folderno, int* isError);
     char* EditOrder(const char* message, int* isError);
 
-    void CacheOrders(int *isError);
     char * GetNextOrder(int *isError);
 
     int GetPrintResult(const char* folderno, const char * filePath);
@@ -51,9 +51,10 @@ private:
 
 extern "C" DLLEXPORT NacppInterface * getTransport(const char* login,
                               const char* password,
+                              bool cache,
                               int  * isError)
 {
-    return new NacppTransport(login, password, isError);
+    return new NacppTransport(login, password, isError, cache);
 }
 
 #endif // NACPPTRANSPORT_H

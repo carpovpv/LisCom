@@ -23,7 +23,7 @@
 
 #include "nacppInterface.h"
 
-typedef NacppInterface* (*TRANSPORT_FACTORY)(const char*, const char*, int *);
+typedef NacppInterface* (*TRANSPORT_FACTORY)(const char*, const char*, bool, int *);
 
 #ifdef WIN32
 HINSTANCE hModule;
@@ -70,11 +70,11 @@ int main ()
         //!!! Внимание. Это тестовый аккаунт. Для тестирования используйте логин и пароль,
         //полученный от менеджеров лаборатории.
 
-        const char * login = "TEST";
-        const char * password = "TEST";
+        const char * login = "TESTER";
+        const char * password = "Q3434";
 
         int res;
-        nacpp = (*p_factory_function)(login, password, &res);
+        nacpp = (*p_factory_function)(login, password, false, &res);
         if(res != 0)
         {
             //Ошибки здесь скорее всего сетевые: недоступен хост, неверно загружены SSL библиотеки и пр.
@@ -86,11 +86,16 @@ int main ()
             return EXIT_FAILURE;
         }
 
+        /*std::string req = "<?xml version=\"1.0\"?><request><personal><guid>{E955F461-0736-42E0-ADAD-C007B14903D3}</guid><surname>Тест</surname><name>200</name><patronimic></patronimic><birthdate>10.01.1990</birthdate><gender>M</gender><clientcode>0471</clientcode><datecollect>24.12.2013 10:54</datecollect></personal><containers><container id=\"1\" external=\"123456789\" biomaterial=\"75\"/></containers><panels><panel code=\"10.100\" container=\"1\"/></panels></request>";
+        char * r = nacpp->CreateOrder(req.c_str(),
+                                      &res);
+        printf("%s\n", r);
+        return 0;*/
         //получение справочника биоматериалов
         char * dict = nacpp->GetDictionary("bio", &res);
         if(res == ERROR_NO)
         {
-            //printf("Result: %s\n", dict);
+            printf("Result: %s\n", dict);
             nacpp->FreeString(dict);
             //дальнейшая обработка
 

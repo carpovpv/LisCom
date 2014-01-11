@@ -16,15 +16,12 @@
 
 NacppTransport::NacppTransport(const std::string & login,
                                const std::string & password,
-                               int * isError)
+                               int * isError,
+                               bool cache)
 {
-    d = new PrivateNacpp(login, password, isError, true);
+    d = new PrivateNacpp(login, password, isError, cache);
 }
 
-void NacppTransport::CacheOrders(int *isError)
-{
-    d->CacheOrders(isError);
-}
 
 NacppTransport::~NacppTransport()
 {
@@ -86,9 +83,16 @@ void NacppTransport::FreeString(char * buf)
     d->FreeString(buf);
 }
 
-NacppInterface * DLLEXPORT login(const char * login, const char * password, int *isError)
+NacppInterface * DLLEXPORT login2(const char * login, const char * password,
+                                 int *isError)
 {
-    return getTransport(login, password, isError);
+    return getTransport(login, password, true, isError);
+}
+
+NacppInterface * DLLEXPORT login(const char * login, const char * password,
+                                 int *isError)
+{
+    return getTransport(login, password, false, isError);
 }
 
 char * DLLEXPORT GetDictionary(NacppInterface *nacpp, const char* dict, int* isError)

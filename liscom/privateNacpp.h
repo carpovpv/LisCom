@@ -81,8 +81,7 @@ public:
     char* CreateOrder(const char* message, int* isError);
     char* DeleteOrder(const char* folderno, int* isError);
     char* EditOrder(const char* message, int* isError);
-    void CacheOrders(int *isError);
-    char * GetNextOrder(int *isError);
+    char* GetNextOrder(int *isError);
 
     int GetPrintResult(const char* folderno, const char * filePath);
     void FreeString(char *);

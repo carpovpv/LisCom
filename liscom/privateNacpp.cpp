@@ -789,11 +789,6 @@ void PrivateNacpp::FreeString(char *buf)
         free(buf);
 }
 
-void PrivateNacpp::CacheOrders(int *isError)
-{
-
-}
-
 //используется всего два запроса для callback
 // 1. получение текущего количества свободных номеров
 // 2. получение следующего номера
@@ -809,6 +804,12 @@ static int call_sqlite(void *data,
 
 char * PrivateNacpp::GetNextOrder(int *isError)
 {
+    if(info->db == NULL)
+    {
+        *isError = ERROR_CACHE_UNAVAIL;
+        return NULL;
+    }
+
     //пробуем получить из базы
     char buf[126];
     std::string sql = "select orderno from orders order by orderno asc limit 1";
@@ -884,8 +885,8 @@ void * cacher(void * inf)
         if( rc == SQLITE_OK )
         {
 
-            const int N = 100;    //максимально за раз
-            const int nmin = 50;  //минимальное количество
+            const int N = 500;    //максимально за раз
+            const int nmin = 100;  //минимальное количество
 
             fprintf(stderr, "Number of folders %s\n", buf);
 

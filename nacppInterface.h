@@ -33,6 +33,7 @@
 #define ERROR_PDF_GENERATION  300
 #define ERROR_PDF_CHECK_SUM   301
 #define ERROR_PDF_FILE_CREATE 302
+#define ERROR_CACHE_UNAVAIL   303
 
 typedef const char* LPCSTR;
 typedef const wchar_t* LPCWSTR;
@@ -158,9 +159,6 @@ public:
     /*закрытие сессии и удаление объекта */
     virtual void Logout() = 0;
 
-    /* Пополнение кэша свободных номеров */
-    virtual void CacheOrders(int *isError) = 0;
-
     /* получение следующего номера из кэша */
     virtual char * GetNextOrder(int *isError) = 0;
 
@@ -173,6 +171,7 @@ public:
 extern "C"
 {
     NacppInterface * DLLEXPORT login(const char * login, const char * password, int *isError);
+    NacppInterface * DLLEXPORT login2(const char * login, const char * password, int *isError);
     char * DLLEXPORT GetDictionary(NacppInterface *nacpp, const char* dict, int* isError);
     char * DLLEXPORT GetFreeOrders(NacppInterface *nacpp, int num, int* isError);
     char * DLLEXPORT GetResults(NacppInterface *nacpp, const char* folderno, int* isError);
