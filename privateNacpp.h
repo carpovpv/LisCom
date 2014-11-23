@@ -39,7 +39,7 @@
 #include "http_parser.h"
 #include "uricodec.h"
 
-#include "nacppInterface.h"
+#include "../nacppInterface.h"
 #include <iostream>
 #include <vector>
 #include <sqlite3.h>
@@ -84,6 +84,8 @@ public:
     char* GetNextOrder(int *isError);
 
     int GetPrintResult(const char* folderno, const char * filePath);
+    int GetPrintResultSeal(const char* folderno, const char * filePath);
+
     void FreeString(char *);
 
 private:

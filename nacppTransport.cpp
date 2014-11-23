@@ -68,6 +68,11 @@ int NacppTransport::GetPrintResult(const char* folderno, const char * filePath)
     return d->GetPrintResult(folderno, filePath);
 }
 
+int NacppTransport::GetPrintResultSeal(const char* folderno, const char * filePath)
+{
+    return d->GetPrintResultSeal(folderno, filePath);
+}
+
 void NacppTransport::Reconnect(int *isError)
 {
     d->Reconnect(isError);

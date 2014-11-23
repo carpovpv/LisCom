@@ -20,31 +20,14 @@ set (SOURCE
         nacppTransport.cpp
     )
 
-
 find_package(OpenSSL REQUIRED)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/modules)
 find_package(SQLite3 REQUIRED)
 
 add_library ( ${PROJECT} SHARED ${HEADERS} ${SOURCE} )
 if(${CMAKE_SYSTEM_NAME} STREQUAL Windows)
-
-set(CMAKE_EXE_LINKER_FLAGS "-static-libgcc -static-libstdc++ -static")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -static-libgcc")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -static-libgcc -static-libstdc++")
-set(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_C_FLAGS} -static-libgcc -s")
-set(CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS "${CMAKE_SHARED_LIBRARY_LINK_CXX_FLAGS} -static-libgcc -static-libstdc++ -s")
-ADD_DEFINITIONS(-static-libgcc)
-
-    target_link_libraries(LisCom ${LIBS} ssl crypto wsock32 gdi32 ssl pthread ${SQLITE3_LIBRARIES})
-
-set_target_properties(LisCom PROPERTIES LINK_SEARCH_START_STATIC 1)
-set_target_properties(LisCom PROPERTIES LINK_SEARCH_END_STATIC 1)
-set_target_properties(LisCom PROPERTIES LINK_FLAGS "-static-libgcc")
+    target_link_libraries(LisCom ${LIBS} eay32 ssleay32 wsock32 gdi32 pthreadGC2)
 endif(${CMAKE_SYSTEM_NAME} STREQUAL Windows)
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
-    target_link_libraries(LisCom ${LIBS} ${OPENSSL_LIBRARIES} pthread ${SQLITE3_LIBRARIES})
-endif(${CMAKE_SYSTEM_NAME} STREQUAL Linux)
-
+target_link_libraries(LisCom ${LIBS} ${OPENSSL_LIBRARIES} pthread ${SQLITE3_LIBRARIES})
 install (TARGETS LisCom DESTINATION ${CMAKE_BINARY_DIR}/bin)
-

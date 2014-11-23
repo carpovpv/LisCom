@@ -27,6 +27,16 @@ struct CRYPTO_dynlock_value
 };
 
 static pthread_mutex_t *mutex_buf = NULL;
+
+/**
+ * OpenSSL locking function.
+ *
+ * @param    mode    lock mode
+ * @param    n        lock number
+ * @param    file    source file name
+ * @param    line    source file line number
+ * @return    none
+ */
 static void locking_function(int mode, int n, const char *file, int line)
 {
     if (mode & CRYPTO_LOCK) {
@@ -35,6 +45,12 @@ static void locking_function(int mode, int n, const char *file, int line)
         pthread_mutex_unlock(&mutex_buf[n]);
     }
 }
+
+/**
+ * OpenSSL uniq id function.
+ *
+ * @return    thread id
+ */
 static unsigned long id_function(void)
 {
     #ifdef WIN32
@@ -44,6 +60,12 @@ static unsigned long id_function(void)
     #endif
 }
 
+/**
+ * OpenSSL allocate and initialize dynamic crypto lock.
+ *
+ * @param    file    source file name
+ * @param    line    source file line number
+ */
 static struct CRYPTO_dynlock_value *dyn_create_function(const char *file, int
 line)
 {
@@ -62,6 +84,15 @@ line)
     return (NULL);
 }
 
+/**
+ * OpenSSL dynamic locking function.
+ *
+ * @param    mode    lock mode
+ * @param    l       lock structure pointer
+ * @param    file    source file name
+ * @param    line    source file line number
+ * @return    none
+ */
 static void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
                               const char *file, int line)
 {
@@ -72,6 +103,15 @@ static void dyn_lock_function(int mode, struct CRYPTO_dynlock_value *l,
     }
 }
 
+/**
+ * OpenSSL destroy dynamic crypto lock.
+ *
+ * @param    l        lock structure pointer
+ * @param    file    source file name
+ * @param    line    source file line number
+ * @return    none
+ */
+
 static void dyn_destroy_function(struct CRYPTO_dynlock_value *l,
                                  const char *file, int line)
 {
@@ -79,11 +119,16 @@ static void dyn_destroy_function(struct CRYPTO_dynlock_value *l,
     free(l);
 }
 
+/**
+ * Initialize TLS library.
+ *
+ * @return    0 on success, -1 on error
+ */
 int tls_init(void)
 {
     int i;
 
-
+    /* static locks area */
     mutex_buf = (pthread_mutex_t*)malloc(CRYPTO_num_locks() * sizeof(pthread_mutex_t));
     if (mutex_buf == NULL) {
         return (-1);
@@ -91,10 +136,10 @@ int tls_init(void)
     for (i = 0; i < CRYPTO_num_locks(); i++) {
         pthread_mutex_init(&mutex_buf[i], NULL);
     }
-
+    /* static locks callbacks */
     CRYPTO_set_locking_callback(locking_function);
     (id_function);
-
+    /* dynamic locks callbacks */
     CRYPTO_set_dynlock_create_callback(dyn_create_function);
     CRYPTO_set_dynlock_lock_callback(dyn_lock_function);
     CRYPTO_set_dynlock_destroy_callback(dyn_destroy_function);
@@ -107,6 +152,11 @@ int tls_init(void)
     return (0);
 }
 
+/**
+ * Cleanup TLS library.
+ *
+ * @return    0
+ */
 int tls_cleanup(void)
 {
     int i;
@@ -131,6 +181,13 @@ int tls_cleanup(void)
     return (0);
 }
 
+#ifndef WIN32
+
+void start() __attribute__ ((constructor));
+void finish() __attribute__ ((destructor));
+
+#endif
+
 void start()
 {
 
@@ -145,7 +202,6 @@ void start()
 
     SSL_load_error_strings ();
     SSL_library_init ();
-
 
     tls_init();
 }
@@ -175,21 +231,6 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID)
     }
 
     return TRUE;
-}
-
-#else
-
-void dllstart() __attribute__ ((constructor));
-void dllfinish() __attribute__ ((destructor));
-
-void dllstart()
-{
-    start();
-}
-
-void dllfinish()
-{
-    stop();
 }
 
 #endif
@@ -224,7 +265,8 @@ PrivateNacpp::PrivateNacpp(const std::string &login,
     else
         *isError = LoginToNacpp(info->login, info->password);
 
-    if(*isError == ERROR_NO && needCache)
+
+    if(needCache)
     {
         //подключаемся к базе SQLite
         //запускаем потом получения пула номеров
@@ -265,7 +307,7 @@ int PrivateNacpp::tcpConnect()
 
     host = gethostbyname (SERVER);
     handle = socket (AF_INET, SOCK_STREAM, 0);
-    if (handle == -1)
+    if (handle == -1 || host == NULL)
     {
         fprintf(stderr, "Socket failed: %d %s.\n",
                 errno, strerror(errno));
@@ -405,6 +447,10 @@ int PrivateNacpp::sslRead (SSL * ssl, Request & params)
 
 int PrivateNacpp::LoginToNacpp(const std::string & login, const std::string & password)
 {
+    if(conn == NULL)
+        return ERROR_COMMUNICATION;
+
+
     SSL *ssl = conn->sslHandle;
 
     assert(ssl);
@@ -519,6 +565,12 @@ void PrivateNacpp::Reconnect(int * isError)
 
 char* PrivateNacpp::GetDictionary(const char* dict, int* isError)
 {
+    if(conn == NULL)
+    {
+        *isError = ERROR_COMMUNICATION;
+        return NULL;
+    }
+
     SSL *ssl = conn->sslHandle;
     std::string response;
 
@@ -581,6 +633,12 @@ char* PrivateNacpp::GetDictionary(const char* dict, int* isError)
 
 char* PrivateNacpp::GetFreeOrders(int num, int* isError)
 {
+    if(conn == NULL)
+    {
+        *isError = ERROR_COMMUNICATION;
+        return NULL;
+    }
+
     SSL *ssl = conn->sslHandle;
     std::string response;
 
@@ -628,6 +686,12 @@ char* PrivateNacpp::GetFreeOrders(int num, int* isError)
 
 char* PrivateNacpp::GetResults(const char* folderno, int* isError)
 {
+    if(conn == NULL)
+    {
+        *isError = ERROR_COMMUNICATION;
+        return NULL;
+    }
+
     SSL *ssl = conn->sslHandle;
     std::string response;
 
@@ -677,6 +741,12 @@ char* PrivateNacpp::GetResults(const char* folderno, int* isError)
 
 char* PrivateNacpp::GetPending(int* isError)
 {
+    if(conn == NULL)
+    {
+        *isError = ERROR_COMMUNICATION;
+        return NULL;
+    }
+
     SSL *ssl = conn->sslHandle;
     std::string response;
 
@@ -715,6 +785,12 @@ char* PrivateNacpp::GetPending(int* isError)
 
 char* PrivateNacpp::CreateOrder(const char* message, int* isError)
 {
+    if(conn == NULL)
+    {
+        *isError = ERROR_COMMUNICATION;
+        return NULL;
+    }
+
     SSL *ssl = conn->sslHandle;
     std::string response;
 
@@ -759,6 +835,12 @@ char* PrivateNacpp::CreateOrder(const char* message, int* isError)
 
 char* PrivateNacpp::DeleteOrder(const char* folderno, int* isError)
 {
+    if(conn == NULL)
+    {
+        *isError = ERROR_COMMUNICATION;
+        return NULL;
+    }
+
     SSL *ssl = conn->sslHandle;
     std::string response;
 
@@ -808,6 +890,12 @@ char* PrivateNacpp::DeleteOrder(const char* folderno, int* isError)
 
 char* PrivateNacpp::EditOrder(const char* message, int* isError)
 {
+    if(conn == NULL)
+    {
+        *isError = ERROR_COMMUNICATION;
+        return NULL;
+    }
+
     SSL *ssl = conn->sslHandle;
     std::string response;
 
@@ -852,8 +940,11 @@ char* PrivateNacpp::EditOrder(const char* message, int* isError)
 
 int PrivateNacpp::GetPrintResult(const char* folderno, const char * filePath)
 {
+    if(conn == NULL)
+        return ERROR_COMMUNICATION;
+
     SSL *ssl = conn->sslHandle;
-    std::string request = "GET /print.php?action=savereport&id=" + (std::string)folderno + "&logo" + " HTTP/1.1\r\n"
+    std::string request = "GET /print.php?action=savereport&id=" + (std::string)folderno + "&logo&signature" + " HTTP/1.1\r\n"
             "Host: nacpp.info\r\n"
             "Cookie: PHPSESSID=";
     request += sessionId +"\r\n\r\n";
@@ -868,32 +959,7 @@ int PrivateNacpp::GetPrintResult(const char* folderno, const char * filePath)
     int res = sslRead (ssl, params);
     if(res == ERROR_NO)
     {
-        /*
-        std::map<std::string, std::string> headers = params.getHeaders();
-        std::string Content_MD5;
-        std::string Content_Length;
 
-        for (std::map<std::string, std::string>::const_iterator it = headers.begin(); it != headers.end(); it++)
-        {
-            if (it->first == "Content-MD5") Content_MD5 = it->second;
-            if (it->first == "Content-Length") Content_Length = it->second;
-        }
-
-        // Zero length
-        if (atoi(Content_Length.c_str()) == 0)
-            return ERROR_PDF_GENERATION;
-
-        // Compute MD5
-        unsigned char hash[32];
-        char calc_Content_MD5[32];
-        MD5((unsigned char*)params.getMessage().data(), params.getMessage().length(), hash);
-        sprintf(calc_Content_MD5, "%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x%.2x",
-                hash[0], hash[1], hash[2], hash[3], hash[4], hash[5], hash[6], hash[7],
-                hash[8], hash[9], hash[10], hash[11], hash[12], hash[13], hash[14], hash[15]);
-
-        if (strcmp(Content_MD5.c_str(), calc_Content_MD5) != 0)
-            return ERROR_PDF_CHECK_SUM;
-        */
         int status = params.getStatus();
         if(status == 200)
         {
@@ -942,6 +1008,77 @@ int PrivateNacpp::GetPrintResult(const char* folderno, const char * filePath)
     }
     return res;
 }
+
+int PrivateNacpp::GetPrintResultSeal(const char* folderno, const char * filePath)
+{
+    if(conn == NULL)
+        return ERROR_COMMUNICATION;
+
+    SSL *ssl = conn->sslHandle;
+    std::string request = "GET /print.php?action=savereport&id=" + (std::string)folderno + "&logo&seal" + " HTTP/1.1\r\n"
+            "Host: nacpp.info\r\n"
+            "Cookie: PHPSESSID=";
+    request += sessionId +"\r\n\r\n";
+
+    int cnt = request.size();
+    int rcnt = SSL_write(ssl, request.c_str(), cnt);
+
+    if(cnt != rcnt)
+        return ERROR_COMMUNICATION;
+
+    Request params(ssl);
+    int res = sslRead (ssl, params);
+    if(res == ERROR_NO)
+    {
+        int status = params.getStatus();
+        if(status == 200)
+        {
+
+            std::string filename = std::string(filePath) +
+                    "report#" +
+                    std::string(folderno, folderno + strlen(folderno)) +
+                    ".pdf";
+#ifdef WIN32
+
+            HANDLE hFile = CreateFile(filename.c_str(), GENERIC_WRITE,
+                                      FILE_SHARE_READ|FILE_SHARE_WRITE, NULL,
+                                      OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL,  NULL);
+
+            if (hFile == INVALID_HANDLE_VALUE)
+            {
+                DWORD errorCode = GetLastError();
+                return errorCode;
+            }
+            else
+            {
+                DWORD rw;
+                WriteFile(hFile,
+                          params.getMessage().c_str(),
+                          params.getMessage().length(),
+                          &rw,
+                          NULL);
+            }
+            CloseHandle(hFile);
+#else
+
+            std::string fn( filename.begin(), filename.end() );
+
+            FILE * fp = fopen(fn.c_str(), "wb+");
+            if(fp != NULL)
+                fwrite(params.getMessage().data(), params.getMessage().length(), 1, fp);
+            else
+                return ERROR_PDF_FILE_CREATE;
+            fclose(fp);
+
+#endif
+            res = ERROR_NO;
+        }
+        else
+            return ERROR_COMMUNICATION;
+    }
+    return res;
+}
+
 
 void PrivateNacpp::FreeString(char *buf)
 {

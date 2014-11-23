@@ -13,7 +13,7 @@
 #ifndef NACPPTRANSPORT_H
 #define NACPPTRANSPORT_H
 
-#include "nacppInterface.h"
+#include "../nacppInterface.h"
 #include <string>
 #include <time.h>
 #include <fstream>
@@ -39,6 +39,7 @@ public:
     char * GetNextOrder(int *isError);
 
     int GetPrintResult(const char* folderno, const char * filePath);
+    int GetPrintResultSeal(const char* folderno, const char * filePath);
     void Reconnect(int *isError);
 
     void Logout();
